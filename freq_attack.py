@@ -5,7 +5,7 @@ import random
 import numpy as np
 import langdetect
 from string import ascii_lowercase
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 class Attack():
     def __init__(self):
@@ -15,11 +15,44 @@ class Attack():
 
 
     def start(self):
-        #1. Populate the matrix with random permutations of the 25 letters
-        self.__randomly_populate_matrix()
+        min_error = 1000
+        while True:
+            #1. Populate the matrix with random permutations of the 25 letters
+            self.__randomly_populate_matrix()
 
-        #2. Decrypt using the current decryption matrix
-        self.__decrypt_attempt()
+            #2. Decrypt using the current decryption matrix
+            plaintext = self.__decrypt_attempt()
+
+            #3. Score the decryption based upon how well the decrypted cipherext matches expected frequencies
+            freq_plaintext = self.__calculate_freq_plaintext(plaintext)
+            error = self.__score_decrypt_attempt(freq_plaintext)
+            min_error = min(min_error, error)
+            print(min_error)
+
+
+    def __score_decrypt_attempt(self, freq_plaintext):
+        error = 0
+        for pair, attempt_freq in freq_plaintext.items():
+            real_freq = self.freq_english_bigrams[pair]
+            error += abs(real_freq - attempt_freq)
+
+        return error
+
+
+    def __calculate_freq_plaintext(self, plaintext):
+        pairs_plain = []
+        for i in range(0, len(self.ciphertext), 2):
+            pairs_plain.append(plaintext[i] + plaintext[i+1])
+
+        counter = Counter(pairs_plain)
+        total_freq = sum(counter.values())
+
+        freq_plaintext = defaultdict(lambda: 0.0)
+        for pair in counter:
+            freq_plaintext[pair] = counter[pair] / total_freq
+
+        return freq_plaintext
+
 
     def __decrypt_attempt(self):
         pairs_cipher = []
@@ -72,10 +105,14 @@ class Attack():
         with open("data/freq_english_bigrams.json") as f:
             bigrams_json = json.load(f)
 
-        freq_english_bigrams = defaultdict(lambda: 0)
+        freq_english_bigrams = defaultdict(lambda: 0.0)
+
+        total_freq = 0
         for bigram, freq in bigrams_json:
-            freq /= 10**8 #scale down
-            freq_english_bigrams[bigram] = freq
+            total_freq += freq
+
+        for bigram, freq in bigrams_json:
+            freq_english_bigrams[bigram] = freq / total_freq
 
         return freq_english_bigrams
 
