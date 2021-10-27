@@ -15,10 +15,19 @@ class Attack():
 
 
     def start(self):
+        #1. Populate the matrix with random permutations of the 25 letters
+        self.__randomly_populate_matrix()
+
         min_error = 1000
+        iteration = 0
+        num_iteration_no_improvement = 0
+        best_matrix = self.matrix.copy()
         while True:
-            #1. Populate the matrix with random permutations of the 25 letters
-            self.__randomly_populate_matrix()
+            iteration += 1
+
+            if num_iteration_no_improvement == 1000:
+                self.matrix = best_matrix.copy()
+                print("Copied back best matrix.")
 
             #2. Decrypt using the current decryption matrix
             plaintext = self.__decrypt_attempt()
@@ -26,8 +35,68 @@ class Attack():
             #3. Score the decryption based upon how well the decrypted cipherext matches expected frequencies
             freq_plaintext = self.__calculate_freq_plaintext(plaintext)
             error = self.__score_decrypt_attempt(freq_plaintext)
+
+            if error < min_error:
+                print(plaintext)
+                print(f"Iteracija: {iteration} -> {error}")
+                best_matrix = self.matrix.copy()
+                num_iteration_no_improvement = 0
+            else:
+                num_iteration_no_improvement += 1
+
             min_error = min(min_error, error)
-            print(min_error)
+
+            #4. Transform the matrix using one of the following operations:
+            #   reflection, rotation of a row, rotation of a column, switching two letters
+            self.__transform_matrix()
+
+
+    def __transform_matrix(self):
+        method = random.randint(1,9)
+
+        #1. Mirror on x axis
+        if method == 1:
+            self.matrix = np.flip(self.matrix, axis=0)
+
+        #2. Mirror on y axis
+        elif method == 2:
+            self.matrix = np.flip(self.matrix, axis=1)
+
+        #3. Swap 2 elements
+        elif method == 3:
+            row1, row2 = random.sample(range(0,5), 2)
+            col1, col2 = random.sample(range(0,5), 2)
+            self.matrix[row1, col1], self.matrix[row2, col2] = self.matrix[row2, col2], self.matrix[row1, col1]
+
+        #4. Swap 2 rows
+        elif method == 4:
+            row1, row2 = random.sample(range(0,5), 2)
+            self.matrix[ [row1, row2] ] = self.matrix[ [row2, row1] ]
+
+        #5. Swap 2 columns
+        elif method == 5:
+            col1, col2 = random.sample(range(0,5), 2)
+            self.matrix[:, col1], self.matrix[:, col2] = self.matrix[:, col2], self.matrix[:, col1].copy()
+
+        #6. Permute 5 rows
+        elif method == 6:
+            np.random.shuffle(self.matrix)
+
+        #7. Permute 5 columns
+        elif method == 7:
+            col_order = [0, 1, 2, 3, 4]
+            random.shuffle(col_order)
+            self.matrix = self.matrix[:, col_order]
+
+        #8. Permute elements of any row
+        elif method == 8:
+            row = random.randint(0,4)
+            np.random.shuffle(self.matrix[row])
+
+        #9. Permute elements of any column
+        elif method == 9:
+            col = random.randint(0, 4)
+            np.random.shuffle(self.matrix[:,col])
 
 
     def __score_decrypt_attempt(self, freq_plaintext):
