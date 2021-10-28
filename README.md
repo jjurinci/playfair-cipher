@@ -43,4 +43,4 @@ napad.brute_force(temperatura)
 ### ILI preko command-line interface-a
 1. Klonirati ovaj repozitorij sa ```git clone https://github.com/jjurinci/playfair-cipher.git```
 2. Postaviti svoj playfair-ov šifrat u datoteku (pr. sifrat.txt) i spremiti ju u direktorij **"data/encrypted_text"**
-3. Preko terminala pokrenuti cmd interface sa python cmd_interface.py" i slijediti korake (potrebno imati numpy instaliran)
+3. Preko terminala pokrenuti cmd_interface.py sa "python cmd_interface.py" i slijediti korake (potrebno imati numpy instaliran)
