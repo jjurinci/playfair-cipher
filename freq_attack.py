@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import time
 import json
 import random
 import math
@@ -12,7 +13,43 @@ class Attack():
     def __init__(self):
         self.freq_english_bigrams = self.__load_english_bigrams()
         self.ciphertext = self.__load_ciphertext()
-        self.matrix = np.chararray(shape = (5,5))
+
+    def start_sim(self, temperature=20):
+        self.parent_key = self.__randomly_populate_key()
+        best_key = self.parent_key
+        best_plaintext = self.__decrypt_attempt(self.parent_key)
+        parent_score = self.calculate_probability(best_plaintext)
+        best_score = parent_score
+
+        for temp in range(temperature, 0, -1):
+            for trans in range(50000, 0, -1):
+                self.child_key = self.__transform_matrix(self.parent_key)
+                plaintext = self.__decrypt_attempt(self.child_key)
+                child_score = self.calculate_probability(plaintext)
+
+                #print(plaintext, child_score)
+
+                dF = child_score - parent_score
+
+                if dF > 0:
+                    parent_score = child_score
+                    self.parent_key = self.child_key
+                else:
+                    probability = math.exp(dF / temp)
+                    if probability > random.uniform(0,1):
+                        parent_score = child_score
+                        self.parent_key = self.child_key
+
+                if parent_score > best_score:
+                    best_score = parent_score
+                    best_key = self.parent_key
+                    best_text = plaintext
+                    print(best_key, best_score, best_text, temp, trans)
+
+            if parent_score == best_score:
+                break
+
+            print("NEWTEMP: ", temperature)
 
     def quadgram_log_probability(self, quadgram):
         return math.log10(self.quadgrams_freq[quadgram] / self.total_freq_quadgram)
@@ -22,101 +59,77 @@ class Attack():
             quadgrams = f.readlines()
 
         self.total_freq_quadgram = 0
-        self.quadgrams_freq = defaultdict(lambda: 0)
+        self.quadgrams_freq = defaultdict(lambda: 1)
         for line in quadgrams:
             quadgram, count = line.split(" ")
-            self.total_freq_quadgram += int(count)
-            self.quadgrams_freq[quadgram] = int(count)
+            quadgram, count = quadgram.lower(), int(count)
+            self.total_freq_quadgram += count
+            self.quadgrams_freq[quadgram] = count
 
+    # Razija string na substring-ove duljine 4 (quadgram).
+    # Pr. "ovojeprimjer" -> "ovoj", "voje", "ojep", "jepr", itd...
+    # Nakon toga, sumira log vjerojatnosti svih quadgram-ova.
     def calculate_probability(self, deciphered_text):
-        pass
+        sum_of_probability = 0
+        for i in range(len(deciphered_text) - 4 + 1):
+            quadgram = deciphered_text[i:i+4]
+            sum_of_probability += self.quadgram_log_probability(quadgram)
+
+        return sum_of_probability
 
 
-    def start(self):
-        #1. Populate the matrix with random permutations of the 25 letters
-        self.__randomly_populate_matrix()
-
-        min_error = 1000
-        iteration = 0
-        num_iteration_no_improvement = 1
-        best_matrix = self.matrix.copy()
-
-        while True:
-            iteration += 1
-
-            if num_iteration_no_improvement % 3000 == 0:
-                self.matrix = best_matrix.copy()
-                #self.__randomly_populate_matrix()
-                print("Regenerated matrix.")
-
-            #2. Decrypt using the current decryption matrix
-            plaintext = self.__decrypt_attempt()
-
-            #3. Score the decryption based upon how well the decrypted cipherext matches expected frequencies
-            freq_plaintext = self.__calculate_freq_plaintext(plaintext)
-            error = self.__score_decrypt_attempt(freq_plaintext)
-
-            if error < min_error:
-                print(plaintext)
-                print(f"Iteracija: {iteration} -> {error}")
-                best_matrix = self.matrix.copy()
-                num_iteration_no_improvement = 1
-            else:
-                num_iteration_no_improvement += 1
-
-            min_error = min(min_error, error)
-
-            #4. Transform the matrix using one of the following operations:
-            #   reflection, rotation of a row, rotation of a column, switching two letters
-            self.__transform_matrix()
-
-
-    def __transform_matrix(self):
-        method = random.uniform(0,1)
-
-        #1. Mirror on x axis
-        if method > 0.92 and method <= 0.94:
-            self.matrix = np.flip(self.matrix, axis=0)
-
-        #2. Mirror on y axis
-        elif method > 0.9 and method <= 0.92:
-            self.matrix = np.flip(self.matrix, axis=1)
+    def __transform_matrix(self, key: list) -> list:
+        choice = random.uniform(0,1)
 
         #3. Swap 2 elements
-        elif method < 0.9:
-            row1, row2 = random.sample(range(0,5), 2)
+        if choice < 0.9:
+            i1, i2 = random.sample(range(0,25), 2)
+            key[i1], key[i2] = key[i2], key[i1]
+
+        #Reverse a key
+        elif choice > 0.9 and choice <= 0.92:
+            key.reverse()
+
+        #Swap 2 columns
+        elif choice > 0.92 and choice <= 0.94:
             col1, col2 = random.sample(range(0,5), 2)
-            self.matrix[row1, col1], self.matrix[row2, col2] = self.matrix[row2, col2], self.matrix[row1, col1]
+            for i in range(5):
+                temp = key[i * 5 + col1]
+                key[i * 5 + col1] = key[i * 5 + col2]
+                key[i * 5 + col2] = temp
 
-        #4. Swap 2 rows
-        elif method > 0.94 and method <= 0.96:
+        #Swap 2 rows
+        elif choice > 0.94 and choice <= 0.96:
             row1, row2 = random.sample(range(0,5), 2)
-            self.matrix[ [row1, row2] ] = self.matrix[ [row2, row1] ]
+            for i in range(5):
+                temp = key[row1 * 5 + i]
+                key[row1 * 5 + i] = key[row2 * 5 + i]
+                key[row2 * 5 + i] = temp
 
-        #5. Swap 2 columns
-        elif method > 0.96 and method <= 1:
-            col1, col2 = random.sample(range(0,5), 2)
-            self.matrix[:, col1], self.matrix[:, col2] = self.matrix[:, col2], self.matrix[:, col1].copy()
+        #Flip all columns
+        elif choice > 0.96 and choice <= 0.98:
+            matrix = np.array(key).reshape(5,5)
+            for col in range(5):
+                for row in range(5//2):
+                    temp = matrix[row][col]
+                    matrix[row][col] = matrix[5 - row - 1][col]
+                    matrix[5 - row - 1][col] = temp
 
-        ##6. Permute 5 rows
-        #elif method == 6:
-        #    np.random.shuffle(self.matrix)
+            key = list(np.ravel(matrix))
 
-        ##7. Permute 5 columns
-        #elif method == 7:
-        #    col_order = [0, 1, 2, 3, 4]
-        #    random.shuffle(col_order)
-        #    self.matrix = self.matrix[:, col_order]
 
-        ##8. Permute elements of any row
-        #elif method == 8:
-        #    row = random.randint(0,4)
-        #    np.random.shuffle(self.matrix[row])
+        #Flip all rows
+        elif choice > 0.98 and choice <= 1:
+            matrix = np.array(key).reshape(5,5)
+            for row in range(5):
+                for col in range(5//2):
+                    temp = matrix[row][col]
+                    matrix[row][col] = matrix[row][5 - col - 1]
+                    matrix[row][5 - col - 1] = temp
 
-        ##9. Permute elements of any column
-        #elif method == 9:
-        #    col = random.randint(0, 4)
-        #    np.random.shuffle(self.matrix[:,col])
+            key = list(np.ravel(matrix))
+
+        return key
 
 
     def __score_decrypt_attempt(self, freq_plaintext):
@@ -143,51 +156,51 @@ class Attack():
         return freq_plaintext
 
 
-    def __decrypt_attempt(self):
-        pairs_cipher = []
-        for i in range(0, len(self.ciphertext), 2):
-            pairs_cipher.append(self.ciphertext[i] + self.ciphertext[i+1])
-
+    def __decrypt_attempt(self, key: list):
         #DECRYPTION RULES
         #Rule 1: Two ciphertext letters in same row -> letter to the left (circular)
         #Rule 2: Two ciphertext letters in the same column -> letter to the top (circular)
         #Rule 3: Otherwise -> letter[own_row][column_occupied_by_other_ciphertext]
 
-        plaintext= ""
-        for letter1, letter2 in pairs_cipher:
-            location_letter1 = np.where(self.matrix == letter1.encode())
-            location_letter2 = np.where(self.matrix == letter2.encode())
+        #matrix = np.array([
+        #    [b'k', b'e', b'y', b'w', b'o'],
+        #    [b'r', b'd', b'a', b'b', b'c'],
+        #    [b'f', b'g', b'h', b'i', b'l'],
+        #    [b'm', b'n', b'p', b'q', b's'],
+        #    [b't', b'u', b'v', b'x', b'z',]
+        #])
 
-            row1, col1 = location_letter1[0][0], location_letter1[1][0]
-            row2, col2 = location_letter2[0][0], location_letter2[1][0]
+        plaintext= ""
+        for index in range(0, len(self.ciphertext), 2):
+            letter1 = self.ciphertext[index]
+            letter2 = self.ciphertext[index+1]
+
+            location_letter1 = key.index(letter1)
+            location_letter2 = key.index(letter2)
+
+            row1, col1 = location_letter1 // 5, location_letter1 % 5
+            row2, col2 = location_letter2 // 5, location_letter2 % 5
 
             if row1 == row2:
-                plaintext += self.matrix[row1][(col1-1)%5].decode()
-                plaintext += self.matrix[row2][(col2-1)%5].decode()
+                plaintext += key[row1 * 5 + (col1 + 4) % 5]
+                plaintext += key[row2 * 5 + (col2 + 4) % 5]
 
             elif col1 == col2:
-                plaintext += self.matrix[(row1-1)%5][col1].decode()
-                plaintext += self.matrix[(row2-1)%5][col2].decode()
+                plaintext += key[(row1 + 4) % 5 * 5 + col1]
+                plaintext += key[(row2 + 4) % 5 * 5 + col2]
 
             else:
-                plaintext += self.matrix[row1][col2].decode()
-                plaintext += self.matrix[row2][col1].decode()
+                plaintext += key[row1 * 5 + col2]
+                plaintext += key[row2 * 5 + col1]
 
         return plaintext
 
 
-    def __randomly_populate_matrix(self):
+    def __randomly_populate_key(self) -> list:
         alphabet = list(ascii_lowercase)
         alphabet.remove("j")
         random.shuffle(alphabet)
-
-        row, col = 0, 0
-        for index, letter in enumerate(alphabet):
-            self.matrix[row][col] = letter
-            col += 1
-            if (index+1) % 5 == 0:
-                row += 1
-                col = 0
+        return alphabet
 
 
     def __load_english_bigrams(self):
@@ -207,10 +220,13 @@ class Attack():
 
 
     def __load_ciphertext(self):
-        with open("data/ciphertext.txt", "r") as f:
+        with open("data/simple_cipher.txt", "r") as f:
             ciphertext = f.read()
 
         return ciphertext.strip().lower()
 
 #Attack().start()
-Attack().load_quadgrams()
+#Attack().load_quadgrams()
+attack = Attack()
+attack.load_quadgrams()
+attack.start_sim(10)
