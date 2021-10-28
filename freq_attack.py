@@ -2,9 +2,10 @@
 
 import json
 import random
+import math
 import numpy as np
-import langdetect
 from string import ascii_lowercase
+from multiprocessing import Pool, Process
 from collections import defaultdict, Counter
 
 class Attack():
@@ -13,6 +14,23 @@ class Attack():
         self.ciphertext = self.__load_ciphertext()
         self.matrix = np.chararray(shape = (5,5))
 
+    def quadgram_log_probability(self, quadgram):
+        return math.log10(self.quadgrams_freq[quadgram] / self.total_freq_quadgram)
+
+    def load_quadgrams(self):
+        with open("data/quadgrams.txt", "r") as f:
+            quadgrams = f.readlines()
+
+        self.total_freq_quadgram = 0
+        self.quadgrams_freq = defaultdict(lambda: 0)
+        for line in quadgrams:
+            quadgram, count = line.split(" ")
+            self.total_freq_quadgram += int(count)
+            self.quadgrams_freq[quadgram] = int(count)
+
+    def calculate_probability(self, deciphered_text):
+        pass
+
 
     def start(self):
         #1. Populate the matrix with random permutations of the 25 letters
@@ -20,14 +38,16 @@ class Attack():
 
         min_error = 1000
         iteration = 0
-        num_iteration_no_improvement = 0
+        num_iteration_no_improvement = 1
         best_matrix = self.matrix.copy()
+
         while True:
             iteration += 1
 
-            if num_iteration_no_improvement == 1000:
+            if num_iteration_no_improvement % 3000 == 0:
                 self.matrix = best_matrix.copy()
-                print("Copied back best matrix.")
+                #self.__randomly_populate_matrix()
+                print("Regenerated matrix.")
 
             #2. Decrypt using the current decryption matrix
             plaintext = self.__decrypt_attempt()
@@ -40,7 +60,7 @@ class Attack():
                 print(plaintext)
                 print(f"Iteracija: {iteration} -> {error}")
                 best_matrix = self.matrix.copy()
-                num_iteration_no_improvement = 0
+                num_iteration_no_improvement = 1
             else:
                 num_iteration_no_improvement += 1
 
@@ -52,51 +72,51 @@ class Attack():
 
 
     def __transform_matrix(self):
-        method = random.randint(1,9)
+        method = random.uniform(0,1)
 
         #1. Mirror on x axis
-        if method == 1:
+        if method > 0.92 and method <= 0.94:
             self.matrix = np.flip(self.matrix, axis=0)
 
         #2. Mirror on y axis
-        elif method == 2:
+        elif method > 0.9 and method <= 0.92:
             self.matrix = np.flip(self.matrix, axis=1)
 
         #3. Swap 2 elements
-        elif method == 3:
+        elif method < 0.9:
             row1, row2 = random.sample(range(0,5), 2)
             col1, col2 = random.sample(range(0,5), 2)
             self.matrix[row1, col1], self.matrix[row2, col2] = self.matrix[row2, col2], self.matrix[row1, col1]
 
         #4. Swap 2 rows
-        elif method == 4:
+        elif method > 0.94 and method <= 0.96:
             row1, row2 = random.sample(range(0,5), 2)
             self.matrix[ [row1, row2] ] = self.matrix[ [row2, row1] ]
 
         #5. Swap 2 columns
-        elif method == 5:
+        elif method > 0.96 and method <= 1:
             col1, col2 = random.sample(range(0,5), 2)
             self.matrix[:, col1], self.matrix[:, col2] = self.matrix[:, col2], self.matrix[:, col1].copy()
 
-        #6. Permute 5 rows
-        elif method == 6:
-            np.random.shuffle(self.matrix)
+        ##6. Permute 5 rows
+        #elif method == 6:
+        #    np.random.shuffle(self.matrix)
 
-        #7. Permute 5 columns
-        elif method == 7:
-            col_order = [0, 1, 2, 3, 4]
-            random.shuffle(col_order)
-            self.matrix = self.matrix[:, col_order]
+        ##7. Permute 5 columns
+        #elif method == 7:
+        #    col_order = [0, 1, 2, 3, 4]
+        #    random.shuffle(col_order)
+        #    self.matrix = self.matrix[:, col_order]
 
-        #8. Permute elements of any row
-        elif method == 8:
-            row = random.randint(0,4)
-            np.random.shuffle(self.matrix[row])
+        ##8. Permute elements of any row
+        #elif method == 8:
+        #    row = random.randint(0,4)
+        #    np.random.shuffle(self.matrix[row])
 
-        #9. Permute elements of any column
-        elif method == 9:
-            col = random.randint(0, 4)
-            np.random.shuffle(self.matrix[:,col])
+        ##9. Permute elements of any column
+        #elif method == 9:
+        #    col = random.randint(0, 4)
+        #    np.random.shuffle(self.matrix[:,col])
 
 
     def __score_decrypt_attempt(self, freq_plaintext):
@@ -192,4 +212,5 @@ class Attack():
 
         return ciphertext.strip().lower()
 
-Attack().start()
+#Attack().start()
+Attack().load_quadgrams()
