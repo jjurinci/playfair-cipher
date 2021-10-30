@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import random
+import secrets
 import math
 import numpy as np
 from string import ascii_lowercase

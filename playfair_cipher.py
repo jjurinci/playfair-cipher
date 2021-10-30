@@ -18,9 +18,9 @@ def chunker(seq: Iterable[str], size: int) -> Generator[tuple[str, ...], None, N
 
 def prepare_input(dirty: str) -> str:
     """
-    Prepare the plaintext by up-casing it,
-    separating repeated letters with X's and
-    replacing all the J letters with I's
+    Priprema plaintexta na nacin da ga se
+    uppercase-a, umetne X izmedu ponavljajucih
+    slova i zamjene svi J sa I.
     """
 
     dirty = "".join([c.upper() for c in dirty if c in string.ascii_letters]).replace(

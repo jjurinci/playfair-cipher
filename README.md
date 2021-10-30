@@ -1,10 +1,10 @@
 # Playfair Cipher
-The Playfair cipher was the first practical digraph substitution cipher. The scheme was invented in 1854 by Charles Wheatstone but was named after Lord Playfair who promoted the use of the cipher. In playfair cipher unlike traditional cipher we encrypt a pair of alphabets(digraphs) instead of a single alphabet.
-It was used for tactical purposes by British forces in the Second Boer War and in World War I and for the same purpose by the Australians during World War II. This was because Playfair is reasonably fast to use and requires no special equipment.
+Playfair šifra bila je prva praktična supstitucijska šifra digrafa. Shemu je 1854. izumio Charles Wheatstone, ali je dobio ime po Lordu Playfairu koji je promovirao korištenje šifre. U playfair šifri, za razliku od tradicionalne šifre, šifriramo par slova (digrafa) umjesto jednog slova.
+Koristile su ga u taktičke svrhe britanske snage u drugom burskom ratu i u prvom svjetskom ratu, a u istu svrhu i Australci tijekom drugog svjetskog rata. To je zato što je Playfair relativno brz za korištenje i ne zahtijeva posebnu opremu.
 
 ## The Playfair Cipher Encryption Algorithm
 ***The algorithm consists of 2 steps:***
-- *Generate the key table* - The key table is a **5×5** grid of alphabets that acts as the key for encrypting the plaintext. Each of the 25 alphabets must be unique and one letter of the alphabet (usually J) is omitted from the table (as the table can hold only 25 alphabets). If the plaintext contains J, then it is replaced by I. The initial alphabets in the key table are the unique alphabets of the key in the order in which they appear followed by the remaining letters of the alphabet in order
+- *Generiranje tablice ključa* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od samo 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ostatak unikatne abecede.
 ```python
 CHAR_TO_OMIT = 'J'
 CHAR_TO_REPLACE = 'I'
@@ -55,7 +55,7 @@ def prepare_input(dirty: str) -> str:
 
     return clean
 ```
-- *Algorithm to encrypt the plain text* - The plaintext is split into pairs of two letters (digraphs). If there is an odd number of letters, a bogus letter is added to the last letter. Pair cannot be made with same letter. Break the letter in single and add a bogus letter to the previous letter. If the letter is standing alone in the process of pairing, then add an extra bogus letter with the alone letter.
+- *Algoritam za enkriptiranje plaintext-a* - Plaintext je podijeljen u parove od 2 slova (digrafi). Ako postoji neparan broj slova, posljednjem se slovu dodaje lažno (bogus) slovo. Par se ne može napraviti sa istim slovom. Ukoliko se to desi, digraf se razbija i lažno slovo se dodaje u sredinu. Ako slovo stoji samostalno u procesu uparivanja, dodaje mu se lažno slovo.
 ```python
 def encode(plaintext: str, key: str) -> str:
     table = generate_table(key)
@@ -67,30 +67,30 @@ def encode(plaintext: str, key: str) -> str:
         row2, col2 = divmod(table.index(char2), 5)
 ```
 
-***Rules for Encryption:***
-- *If both the letters are in the same column* - Take the letter below each one (going back to the top if at the bottom)
+***Pravila enkripcije:***
+- *Ako su oba slova u istoj koloni* - Uzima se slovo ispod (promatranog slova) cirkularno (uzima se prvo gornje slovo ako ne postoji slovo ispod)
 ```python
 if row1 == row2:
     ciphertext += table[row1 * 5 + (col1 + 1) % 5]
     ciphertext += table[row2 * 5 + (col2 + 1) % 5]
 ```
-- *If both the letters are in the same row* - Take the letter to the right of each one (going back to the leftmost if at the rightmost position)
+- *Ako su oba slova u istom redu* - Uzima se slovo desno (od promatranog slova) cirkularno (uzima se prvo lijevo slovo ako ne postoji desno slovo)
 ```python
 elif col1 == col2:
     ciphertext += table[((row1 + 1) % 5) * 5 + col1]
     ciphertext += table[((row2 + 1) % 5) * 5 + col2]
 ```
-- *If neither of the above rules is true* - Form a rectangle with the two letters and take the letters on the horizontal opposite corner of the rectangle
+- *Inače* - Formirati pravokutnik gdje su dijagonalno suprotni kutevi 2 promatrana slova. Za svako promatrano slovo se uzima slovo u horizontalnom suprotnom kutu pravokutnika.
 ```python
 else:
     ciphertext += table[row1 * 5 + col2]
     ciphertext += table[row2 * 5 + col1]
 ```
 ## The Playfair Cipher Decryption Algorithm
-***Decrypting the Playfair cipher is as simple as doing the same process in reverse. The receiver has the same key and can create the same key table, and then decrypt any messages made using that key. The algorithm consists of 2 steps:***
-- *Generate the key table at the receiver's end* - The key table is a **5×5** grid of alphabets that acts as the key for encrypting the plaintext. Each of the 25 alphabets must be unique and one letter of the alphabet (usually J) is omitted from the table (as the table can hold only 25 alphabets). If the plaintext contains J, then it is replaced by I. The initial alphabets in the key table are the unique alphabets of the key in the order in which they appear followed by the remaining letters of the alphabet in order.
+***Dekripcija Playfair-ove šifre je jednostavno isti proces, ali unatrag. Primatlej ima isti ključ i kreira istu matricu, i zatim dekriptira bilo koji šifrat koji je napravljen s tim ključem. Algoritam se sastoji od 2 koraka:***
+- *Generiranje tablice ključa (primatelj)* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od samo 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ostatak unikatne abecede.
 
-- *Algorithm to decrypt the ciphertext* - The ciphertext is split into pairs of two letters (digraphs). **The ciphertext always has an even number of characters.**
+- *Algoritam za dekriptiranje šifrata* - Šifrat se dijeli u parove od 2 slova (digraf). **Šifrat uvijek ima paran broj slova.**
 ```python
 def decode(ciphertext: str, key: str) -> str:
     table = generate_table(key)
@@ -100,21 +100,21 @@ def decode(ciphertext: str, key: str) -> str:
         row1, col1 = divmod(table.index(char1), 5)
         row2, col2 = divmod(table.index(char2), 5)
 ```
-***Rules for Decryption:***
-- *If both the letters are in the same column* - Take the letter above each one (going back to the bottom if at the top)
+***Pravila dekripcije:***
+- *Ako su oba slova u istoj koloni:* - Uzima se slovo iznad (promatranog slova) cirkularno (uzima se prvo donje slovo ako ne postoji slovo iznad)
 ```python
 if row1 == row2:
     plaintext += table[row1 * 5 + (col1 - 1) % 5]
     plaintext += table[row2 * 5 + (col2 - 1) % 5]
 ```
-- *If both the letters are in the same row* - Take the letter to the left of each one (going back to the rightmost if at the leftmost position)
+- *Ako su oba slova u istom redu:* - Uzima se slovo lijevo (od promatranog slova) cirkularno (uzima se prvo desno slovo ako ne postoji lijevo slovo)
 ```python
 elif col1 == col2:
     plaintext += table[((row1 - 1) % 5) * 5 + col1]
     plaintext += table[((row2 - 1) % 5) * 5 + col2]
 
 ```
-- *If neither of the above rules is true* - Form a rectangle with the two letters and take the letters on the horizontal opposite corner of the rectangle
+- *Inače* - Formirati pravokutnik gdje su dijagonalno suprotni kutevi 2 promatrana slova. Za svako promatrano slovo se uzima slovo u horizontalnom suprotnom kutu pravokutnika.
 ```python
 else:
     plaintext += table[row1 * 5 + col2]
