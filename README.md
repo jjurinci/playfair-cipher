@@ -1,10 +1,13 @@
-# Playfair Cipher
-Playfair šifra bila je prva praktična supstitucijska šifra digrafa. Shemu je 1854. izumio Charles Wheatstone, ali je dobio ime po Lordu Playfairu koji je promovirao korištenje šifre. U playfair šifri, za razliku od tradicionalne šifre, šifriramo par slova (digrafa) umjesto jednog slova.
+**Napomena:** Čitatelj može [ovdje](https://github.com/jjurinci/playfair-cipher/tree/main/vlastiti_pokusaji) pronaći naše vlastite implementacije ispod navedenih koncepata. Zbog nezgrapnosti vlastitih implementacija smo odlučili preuzeti i modificirati postojeće ispravnije implementacije sa interneta. <br><br> Izvori sa interneta: [Playfair-ova enkripcija i dekripcija (github)](https://github.com/TheAlgorithms/Python/blob/master/ciphers/playfair_cipher.py), [Brute force simulated annealing napad (github)](https://github.com/damiannolan/simulated-annealing-playfair-cipher-breaker/), [Brute force znanstveni rad (pdf)](https://ep.liu.se/ecp/158/010/ecp19158010.pdf)
+
+# Playfair-ova šifra
+
+Playfair-ova šifra bila je prva praktična supstitucijska šifra digrafa. Shemu je 1854. izumio Charles Wheatstone, ali je dobio ime po Lordu Playfairu koji je promovirao korištenje šifre. U playfair šifri, za razliku od tradicionalne šifre, šifriramo par slova (digrafa) umjesto jednog slova.
 Koristile su ga u taktičke svrhe britanske snage u drugom burskom ratu i u prvom svjetskom ratu, a u istu svrhu i Australci tijekom drugog svjetskog rata. To je zato što je Playfair relativno brz za korištenje i ne zahtijeva posebnu opremu.
 
-## The Playfair Cipher Encryption Algorithm
-***The algorithm consists of 2 steps:***
-- *Generiranje tablice ključa* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od samo 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ostatak unikatne abecede.
+## Enkripcija Playfair-ove šifre (encrypt_decrypt.py)
+***Algoritam se sastoji od 2 koraka:***
+- *Generiranje tablice ključa* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ide ostatak unikatne abecede.
 ```python
 CHAR_TO_OMIT = 'J'
 CHAR_TO_REPLACE = 'I'
@@ -30,9 +33,9 @@ def generate_table(key: str) -> list[str]:
 ```python
 def prepare_input(dirty: str) -> str:
     """
-    Prepare the plaintext by up-casing it,
-    separating repeated letters with X's and
-    replacing all the J letters with I's
+    Priprema plaintexta na nacin da ga se
+    uppercase-a, umetne X izmedu ponavljajucih
+    slova i zamjene svi J sa I.
     """
 
     dirty = "".join([c.upper() for c in dirty if c in string.ascii_letters]).replace(
@@ -68,13 +71,14 @@ def encode(plaintext: str, key: str) -> str:
 ```
 
 ***Pravila enkripcije:***
-- *Ako su oba slova u istoj koloni* - Uzima se slovo ispod (promatranog slova) cirkularno (uzima se prvo gornje slovo ako ne postoji slovo ispod)
+- *Ako su oba slova u istom redu* - Uzima se slovo desno (od promatranog slova) cirkularno (uzima se prvo lijevo slovo ako ne postoji desno slovo)
 ```python
 if row1 == row2:
     ciphertext += table[row1 * 5 + (col1 + 1) % 5]
     ciphertext += table[row2 * 5 + (col2 + 1) % 5]
 ```
-- *Ako su oba slova u istom redu* - Uzima se slovo desno (od promatranog slova) cirkularno (uzima se prvo lijevo slovo ako ne postoji desno slovo)
+
+- *Ako su oba slova u istoj koloni* - Uzima se slovo ispod (promatranog slova) cirkularno (uzima se prvo gornje slovo ako ne postoji slovo ispod)
 ```python
 elif col1 == col2:
     ciphertext += table[((row1 + 1) % 5) * 5 + col1]
@@ -86,9 +90,9 @@ else:
     ciphertext += table[row1 * 5 + col2]
     ciphertext += table[row2 * 5 + col1]
 ```
-## The Playfair Cipher Decryption Algorithm
-***Dekripcija Playfair-ove šifre je jednostavno isti proces, ali unatrag. Primatlej ima isti ključ i kreira istu matricu, i zatim dekriptira bilo koji šifrat koji je napravljen s tim ključem. Algoritam se sastoji od 2 koraka:***
-- *Generiranje tablice ključa (primatelj)* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od samo 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ostatak unikatne abecede.
+## Dekripcija Playfair-ove šifre (encrypt_decrypt.py)
+***Dekripcija Playfair-ove šifre je isti proces, ali unatrag. Primatelj ima isti ključ i kreira istu matricu, i zatim dekriptira bilo koji šifrat koji je napravljen s tim ključem. Algoritam se sastoji od 2 koraka:***
+- *Generiranje tablice ključa (primatelj)* - Tablica ključa je **5×5** matrica slova abecede koja služi kao ključ za enkriptiranje plaintext-a. Svako od 25 slova mora biti unikatno i jedno slovo se ispušta (obično J), zato što matrica ima kapacitet od samo 25 elemenata. Ako plaintext ima slovo J onda se zamjenjuje sa slovom I. Inicijalna slova u matrici su unikatna slova ključa (keyword), zatim ide ostatak unikatne abecede.
 
 - *Algoritam za dekriptiranje šifrata* - Šifrat se dijeli u parove od 2 slova (digraf). **Šifrat uvijek ima paran broj slova.**
 ```python
@@ -101,13 +105,14 @@ def decode(ciphertext: str, key: str) -> str:
         row2, col2 = divmod(table.index(char2), 5)
 ```
 ***Pravila dekripcije:***
-- *Ako su oba slova u istoj koloni:* - Uzima se slovo iznad (promatranog slova) cirkularno (uzima se prvo donje slovo ako ne postoji slovo iznad)
+- *Ako su oba slova u istom redu:* - Uzima se slovo lijevo (od promatranog slova) cirkularno (uzima se prvo desno slovo ako ne postoji lijevo slovo)
 ```python
 if row1 == row2:
     plaintext += table[row1 * 5 + (col1 - 1) % 5]
     plaintext += table[row2 * 5 + (col2 - 1) % 5]
 ```
-- *Ako su oba slova u istom redu:* - Uzima se slovo lijevo (od promatranog slova) cirkularno (uzima se prvo desno slovo ako ne postoji lijevo slovo)
+
+- *Ako su oba slova u istoj koloni:* - Uzima se slovo iznad (promatranog slova) cirkularno (uzima se prvo donje slovo ako ne postoji slovo iznad)
 ```python
 elif col1 == col2:
     plaintext += table[((row1 - 1) % 5) * 5 + col1]
@@ -120,11 +125,10 @@ else:
     plaintext += table[row1 * 5 + col2]
     plaintext += table[row2 * 5 + col1]
 ```
-# Brute force napad na playfair-ov sifrat
+# Brute force napad na playfair-ov sifrat (freq_attack.py)
 
-**Napomena:** napad nije optimiziran, ali probija playfair-ov šifrat ako mu se daju dobri parametri i ako ga se pokrene dovoljno puta (obicno 2-3). Također, zbog prethodnih neuspjelih implementacija napada (sporost) smo se inspirirali [ovim znanstvenim radom](https://ep.liu.se/ecp/158/010/ecp19158010.pdf) i [ovim java kodom](https://github.com/damiannolan/simulated-annealing-playfair-cipher-breaker/).
+**Napomena:** napad nije optimiziran, ali probija playfair-ov šifrat ako mu se daju dobri parametri i ako ga se pokrene dovoljno puta (obicno 2-3). Također, zbog prethodnih [neuspjelih implementacija napada (sporost)](https://github.com/jjurinci/playfair-cipher/blob/main/vlastiti_pokusaji/very_slow_freq_attack.py) smo se inspirirali [ovim znanstvenim radom](https://ep.liu.se/ecp/158/010/ecp19158010.pdf) i [ovim java kodom](https://github.com/damiannolan/simulated-annealing-playfair-cipher-breaker/).
 
-<br>
 Kategorija napada: **Frequency attack (simulated annealing)**
 
 ### Simulated Annealing napad
@@ -136,7 +140,7 @@ To je jedan od razloga zašto je dosta efektivniji u razbijanju šifrata generir
 
 **Input:** samo šifrat
 
-**Bitne varijable: ** temperatura i tranzicije (mijenjanje temperature može znatno utjecati na rješenje)
+**Bitne varijable:** temperatura i tranzicije (mijenjanje temperature može znatno utjecati na rješenje)
 
 **Optimizacijska funkcija:** suma log10 vjerojatnosti frekvencije quadgram-ova (string od 4 slova) plaintext-a. Pretpostavlja koliko je plaintext "engleski", što je više "engleski" to će plaintext dobiti bolju ocjenu.
 
@@ -161,4 +165,4 @@ napad.brute_force(temperatura)
 ### ILI preko command-line interface-a
 1. Klonirati ovaj repozitorij sa ```git clone https://github.com/jjurinci/playfair-cipher.git```
 2. Postaviti svoj playfair-ov šifrat u datoteku (pr. sifrat.txt) i spremiti ju u direktorij **"data/encrypted_text"**
-3. Preko terminala pokrenuti cmd_interface.py sa "python3 cmd_interface.py" i slijediti korake (potrebno imati numpy instaliran)
+3. Preko terminala pokrenuti cmd_interface.py sa "python3 cmd_interface_attack.py" i slijediti korake (potrebno imati numpy instaliran)
